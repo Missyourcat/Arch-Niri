@@ -1,0 +1,837 @@
+\documentclass[a4paper, twocolumn, twoside, 10pt]{article}
+\usepackage[english]{babel}
+\usepackage[
+    inner=1cm,    % 内侧边距（靠近书脊）,稍微加大一点,防止字被装订遮住
+    outer=1cm,  % 外侧边距（靠近手边）,保持原样
+    top=1.5cm, 
+    bottom=1.5cm,
+]{geometry}
+\usepackage{fontspec}
+\usepackage{amsmath, amssymb} % 数学公式
+\usepackage{ctex}             % 中文支持
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{microtype}
+\usepackage[
+    unicode,
+    bookmarks=true,
+    bookmarksopen=true
+]{hyperref}
+\setlength{\columnseprule}{0.4pt}
+\setlength{\columnsep}{12pt}
+% 代码块样式
+\lstset{
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{gray!10},
+    frame=single,
+    breaklines=true,
+    xleftmargin=0.1\linewidth,
+    xrightmargin=0.1\linewidth,
+    breakatwhitespace=true,
+    columns=flexible
+}
+\pagestyle{plain}
+
+\title{\heiti 手动安装Linux} 
+
+\begin{document}
+% \maketitle
+\section{Live环境基础设置}
+
+\subsection{连接 Wi-Fi}
+
+查看网络设备：
+\begin{lstlisting}
+ip link
+\end{lstlisting}
+
+输入以下命令进入 iwd：
+\begin{lstlisting}
+iwctl
+\end{lstlisting}
+
+扫描和获取无线网络：
+\begin{lstlisting}
+station wlan0 scan
+station wlan0 get-networks
+\end{lstlisting}
+
+然后连接无线网络：
+\begin{lstlisting}
+station wlan0 connect <WiFi名称>
+\end{lstlisting}
+
+退出输入：
+\begin{lstlisting}
+exit
+\end{lstlisting}
+
+输入密码后输入以下命令查看网络是否连接成功：
+\begin{lstlisting}
+ip a
+\end{lstlisting}
+
+
+同步时间：
+\begin{lstlisting}
+timedatectl set-ntp true
+\end{lstlisting}
+
+配置镜像源：
+\begin{lstlisting}
+reflector -a 12 -c cn -f 10 -l 20 --sort rate(可能更换score) --save /etc/pacman.d/mirrorlist
+\end{lstlisting}
+
+更新数据库+安装密钥：
+\begin{lstlisting}
+pacman -Sy archlinux-keyring
+\end{lstlisting}
+
+\subsection{硬盘分区}
+
+查看磁盘：
+\begin{lstlisting}
+lsblk -pf
+\end{lstlisting}
+
+不确定时，通过以下指令列出详细信息：
+\begin{lstlisting}
+fdisk -l /dev/sda(或其他磁盘)
+\end{lstlisting}
+
+还是不确定，通过以下命令查看空间：
+\begin{lstlisting}
+cfdisk /dev/sda(或其他磁盘)
+\end{lstlisting}
+
+第一次使用时会弹出选项选择，选择 GPT 分区表。左右键选择 NEW ，创建一个100MB的分区，再选择 TYPE ，把类型修改为 EFI System。如果列表没有，可能使用的是MBR分区，要修改为GPT。通过以下命令修改：
+\begin{lstlisting}
+fdisk /dev/sda
+Command (m for help):g
+Command (m for help):w
+\end{lstlisting}
+
+接着创建一个分区，使用剩余的空间，选择 NEW ，直接回车，类型为 Linux filesystem（不对时需要更改）。
+
+分区结束后选择 Write，输入 yes 确认，Quit退出。
+
+再次查看分区：
+\begin{lstlisting}
+lsblk -pf
+\end{lstlisting}
+
+格式化分区：
+\begin{lstlisting}
+mkfs.fat -F 32 /dev/sda1（efi）
+mkfs.btrfs /dev/sda2（空闲文件）
+\end{lstlisting}
+
+\subsection{创建子卷}
+
+挂载分区：
+\begin{lstlisting}
+mount -t btrfs /dev/sda2 /mnt
+\end{lstlisting}
+
+创建/和home子卷：
+\begin{lstlisting}
+btrfs subvolume create /mnt/@
+btrfs subvolume create /mnt/@home
+\end{lstlisting}
+
+再次查看分区：
+\begin{lstlisting}
+lsblk -pf
+\end{lstlisting}
+
+现在是根分区挂载到了mnt，需要取消挂载：
+\begin{lstlisting}
+umount /mnt
+\end{lstlisting}
+
+挂载root子卷到/mnt：
+\begin{lstlisting}
+mount -t btrfs -o subvol=/@,compress=zstd /dev/sda2 /mnt
+mount --mkdir -t btrfs -o subvol=/@home,compress=zstd /dev/sda2 /mnt/home
+mount --mkdir /dev/sda1 /mnt/efi
+\end{lstlisting}
+
+cd到/mnt，查看是否有@和@home子卷。
+
+\subsection{安装系统}
+
+安装软件到指定的根目录下：
+\begin{lstlisting}
+pacstrap -K /mnt base base-devel linux(或linux-zen) linux-firmware btrfs-progs
+\end{lstlisting}
+\begin{lstlisting}
+pacstrap /mnt networkmanager vim sudo intel-ucode(或amd-ucode)
+\end{lstlisting}
+
+生成fstab文件：
+\begin{lstlisting}
+genfstab -U /mnt > /mnt/etc/fstab
+\end{lstlisting}
+
+进入系统：
+\begin{lstlisting}
+arch-chroot /mnt
+\end{lstlisting}
+
+手动设置时区：
+\begin{lstlisting}
+ln -s /usr/share/zoneinfo/Asia/Shanghai /etc/localtime 
+\end{lstlisting}
+
+自动设置时区：
+\begin{lstlisting}
+timedatectl set-timezone Asia/Shanghai
+\end{lstlisting}
+
+查看时间是否正确：
+\begin{lstlisting}
+timedatectl
+\end{lstlisting}
+
+调整时间误差：
+\begin{lstlisting}
+hwclock --systohc
+\end{lstlisting}
+
+系统本地化设置：
+\begin{lstlisting}
+vim /etc/locale.gen 
+"/"键搜索 en_US.UTF-8 和 zhCN.UTF-8 ，去掉前面的注释，:wq 保存退出。
+\end{lstlisting}
+
+生成本地化设置：
+\begin{lstlisting}
+locale-gen
+\end{lstlisting}
+
+编辑locale.conf文件，设置系统语言环境：
+\begin{lstlisting}
+vim /etc/locale.conf
+插入:LANG=en_US.UTF-8
+保存退出
+\end{lstlisting}
+
+设置主机名：
+\begin{lstlisting}
+vim /etc/hostname
+插入:xxxxx（只能包含小写字母，数字0-9，短横杠-）
+保存退出
+\end{lstlisting}
+
+修改root密码：
+\begin{lstlisting}
+passwd
+输入完之后可以通过
+cat /etc/shadow
+查看密码是否修改成功，成功的话会显示加密后的密码。
+\end{lstlisting}
+
+安装引导程序：
+\begin{lstlisting}
+pacman -S grub efibootmgr
+\end{lstlisting}
+
+安装引导：
+\begin{lstlisting}
+grub-install --target=x86_64-efi --efi-directory=/efi --boot-directory=/efi --bootloader-id=GRUB(来一个你喜欢的名称)
+\end{lstlisting}
+
+如果主板没有识别，可以尝试以下命令：
+\begin{lstlisting}
+grub-install --target=x86_64-efi --efi-directory=/efi --boot-directory=/efi --removable
+\end{lstlisting}
+
+挂载链接：
+\begin{lstlisting}
+ln -s /efi/grub /boot/grub
+\end{lstlisting}
+
+生成grub配置文件：
+\begin{lstlisting}
+grub-mkconfig -o /efi(boot也可以)/grub/grub.cfg
+\end{lstlisting}
+
+配置双系统：
+\begin{lstlisting}
+pacman -S os-prober exfat-utils
+\end{lstlisting}
+
+编辑源文件：
+\begin{lstlisting}
+vim /etc/default/grub
+shift + g 到文件末尾，插入以下内容：
+GRUB_DISABLE_OS_PROBER=false
+可选启动选项记忆功能：
+取消注释GRUB_SAVEDEFAULT=true
+gg到文件开头，修改：
+GRUB_DEFAULT=saved
+GRUB_CMDLINE_LINUX_DEFAULT="loglevel=5"
+(显示日志)
+保存退出
+\end{lstlisting}
+
+个人一个小问题，pice总线报错：
+\begin{lstlisting}
+GRUB_CMDLINE_LINUX_DEFAULT="loglevel=5 quiet splash pcie=noaer(或者pcie=nommconf)"
+sudo update-grub
+\end{lstlisting}
+
+再次生成grub配置文件：
+\begin{lstlisting}
+grub-mkconfig -o /boot/grub/grub.cfg
+\end{lstlisting}
+
+安装Zram：
+\begin{lstlisting}
+pacman -S zram-generator
+\end{lstlisting}
+
+配置Zram：
+\begin{lstlisting}
+vim /etc/systemd/zram-generator.conf
+插入以下内容：
+[zram0]
+zram-size = ram
+compression-algorithm = zstd
+保存退出
+\end{lstlisting}
+
+编辑源文件：
+\begin{lstlisting}
+vim /etc/default/grub
+gg到文件开头，修改：
+GRUB_CMDLINE_LINUX_DEFAULT="loglevel=5 quiet splash pcie=noaer zswap.enabled=0"
+保存退出
+\end{lstlisting}
+
+再次生成grub配置文件：
+\begin{lstlisting}
+grub-mkconfig -o /boot/grub/grub.cfg
+\end{lstlisting}
+
+退出chroot环境：
+\begin{lstlisting}
+exit
+\end{lstlisting}
+
+重启：
+\begin{lstlisting}
+reboot
+\end{lstlisting}
+
+\section{系统初设置}
+
+\subsection{网络设置}
+
+开启NetworkManager服务：
+\begin{lstlisting}
+systemctl enable --now NetworkManager
+\end{lstlisting}
+
+打开网络连接：
+\begin{lstlisting}
+nmtui
+移动到
+Activate a connection
+选择连接的网络
+输入密码
+完成连接。
+\end{lstlisting}
+
+来一点点装逼软件：
+\begin{lstlisting}
+pacman -S fastfetch cmatrix
+\end{lstlisting}
+
+\subsection{快照设置}
+
+更新一波：
+\begin{lstlisting}
+pacman -Syu
+\end{lstlisting}
+
+来一些基本设置：
+\begin{lstlisting}
+vim /etc/environment
+插入以下内容：
+EDITOR=vim
+保存退出
+exit
+重新登录让环境变量生效
+\end{lstlisting}
+
+创建普通用户：
+\begin{lstlisting}
+useradd -mG wheel username
+passwd username
+visudo
+找到以下行，取消注释：
+%wheel ALL=(ALL:ALL) ALL
+保存退出
+\end{lstlisting}
+
+开启32位软件源：
+\begin{lstlisting}
+vim /etc/pacman.conf
+找到以下行，取消注释：
+[multilib] 
+Include = /etc/pacman.d/mirrorlist
+在最底部插入：
+[archlinuxcn]
+Server = https://mirrors.aliyun.com
+（mirrors.ustc.edu.cn）/archlinuxcn/$arch
+保存退出
+pacman -Sy archlinuxcn-keyring
+pacman -S yay paru
+\end{lstlisting}
+
+安装快照工具：
+\begin{lstlisting}
+pacman -S snapper snap-pac btrfs-assistant grub-btrfs inotify-tools
+\end{lstlisting}
+
+开启快照服务：
+\begin{lstlisting}
+systemctl enable --now grub-btrfsd
+重启电脑
+\end{lstlisting}
+
+创建快照：
+\begin{lstlisting}
+snapper -c root create-config /
+snapper -c home create-config /home
+snapper -c root create --description "快照描述"
+snapper -c home create --description "快照描述"
+pacman -S linux-lts
+grub-mkconfig -o /boot/grub/grub.cfg
+\end{lstlisting}
+
+恢复快照（root身份）：
+\begin{lstlisting}
+snapper -c root list
+snapper -c root undochange (使用的快照序号)..0
+或
+btrfs-assistant -l
+btrfs-assistant -r (使用的快照序号)
+\end{lstlisting}
+
+\subsection{驱动设置}
+
+安装头文件：
+\begin{lstlisting}
+pacman -S --needed linux-zen-headers linux-lts-headers
+\end{lstlisting}
+
+安装显卡驱动：
+\begin{lstlisting}
+# 英伟达
+pacman -S nvidia-open-dkms(去官网找对应的包) nvidia-utils lib32-nvidia-utils
+# intel 
+pacman -S mesa lib32-mesa vulkan-intel lib32-vulkan-intel
+# amd
+pacman -S mesa lib32-mesa vulkan-radeon lib32-vulkan-radeon xf86-video-amdgpu
+\end{lstlisting}
+
+视频编辑码的驱动：
+\begin{lstlisting}
+# intel
+pacman -S intel-media-driver （或者libva-intel-driver）
+# nvidia
+pacman -S --needed nvidia-utils libva-nvidia-driver
+# amd 不需要
+reboot
+\end{lstlisting}
+
+登录普通账户
+安装固件软件：
+\begin{lstlisting}
+sudo pacman -S sof-firmware alsa-ucm-conf alsa-firmware
+sudo pacman -S pipewire wireplumber pipewire-alsa pipewire-pulse pipewire-jack
+systemctl --user enable pipewire pipewire-pulse wireplumber
+sudo pacman -S bulez
+sudo systemctl enable --now bluetooth
+sudo pacman -S power-profiles-daemon
+sudo systemctl enable --now power-profiles-daemon
+sudo pacman -S noto-fonts noto-fonts-emoji adobe-source-han-sans-cn-fonts
+sudo pacman -S flatpak
+sudo flatpak remote-modify flathub --url=https://mirrors.sjtu.edu.cn/flathub
+reboot
+\end{lstlisting}
+
+受苦了，存档一下吧
+\begin{lstlisting}
+sudo snapper -c root create --description "初始设置完成"
+sudo snapper -c home create --description "初始设置完成"
+\end{lstlisting}
+
+\section{桌面环境(niri篇)}
+
+\subsection{安装桌面环境}
+
+浅浅的安装一下：
+\begin{lstlisting}
+sudo pacman -S fish
+fish
+sudo pacman -S niri xwayland-satellite xdg-desktop-portal-gnome fuzzel kitty(alacritty) firefox wqy-zenhei
+选择pipewire-jack作为默认音频后端:2
+选择noto-fonts作为firefox默认字体:2
+niri-session
+\end{lstlisting}
+
+super+shift+e退出
+\begin{lstlisting}
+sudo pacman -S --needed vim
+vim ~/.config/niri/config.kdl
+搜索alacritty，找到以下内容：
+{spawn "alacritty";}
+修改为kitty
+想自动进入fish
+{spawn "kitty" "-e" "fish";}
+或
+{spawn-sh "kitty -e fish";}
+搜索output，找到以下内容：
+/-output "eDP-1"
+同时super+t再打开一个终端
+niri msg outputs
+找到接口名称(eDP-1)
+找个分辨率+刷新率
+回到ouput块，修改为：
+output "eDP-1" {
+    mode "1920x1080@60"
+    scale 2.5
+    postion x=0 y=0
+    focus-at-startup
+}
+保存:w
+\end{lstlisting}
+
+设置取消鼠标加速：
+\begin{lstlisting}
+接着这个文件
+搜索/mouse
+mouse {
+    accel-profile "flat"
+    scroll-factor horizontal=2.0 vertical=-1.0
+    自己设置试试，不需要可以进行注释
+}
+上方natural-scroll可以设置自然滚动
+注释掉就是正常滚动。
+保存退出
+\end{lstlisting}
+
+安装点重要程序：
+\begin{lstlisting}
+sudo pacman -S libnotify mako polkit-gnome
+\end{lstlisting}
+
+进入niri配置文件
+\begin{lstlisting}
+找到spawn-at-startup
+直接写！
+spawn-at-startup "waybar"
+spawn-at-startup "/usr/lib/polkit-gnome
+/polkit-gnome-authentication-agent-1"
+spawn-at-startup "mako"
+保存退出
+mako & disown
+/usr/lib/polkit-gnome
+/polkit-gnome-authentication-agent-1 & disown
+测试一下
+notify-send hello
+mkdir -p ~/.config/mako
+vim ~/.config/mako/config
+输入以下内容：
+default-timeout=5000
+border-radius=8
+保存退出
+makoctl reload
+vim ~/.config/niri/config.kdl
+gg来到顶部，写入：
+environment {
+    LC_MESSAGES "zh_CN.UTF-8"
+}
+保存退出
+\end{lstlisting}
+
+如果是自动化安装：
+\begin{lstlisting}
+sudo vim /etc/locale.gen
+取消注释zh_CN.UTF-8
+sudo locale-gen
+super + shift + e退出
+exit*2
+登录
+niri-session
+\end{lstlisting}
+
+想用中文运行某个软件:
+\begin{lstlisting}
+LANG=zh_CN.UTF-8 firefox
+\end{lstlisting}
+
+\subsection{输入法设置}
+
+安装输入法：
+\begin{lstlisting}
+sudo pacman -S fcitx5-im fcitx5-rime rime-ice-pinyin-git
+vim ~/.config/niri/config.kdl
+gg来到顶部，写入：
+environment {
+    LC_MESSAGES "zn_CN.UTF-8"
+    XMODIFIERS "@im=fcitx"
+}
+保存退出
+mkdir -p ~/.local/share/fcitx5/rime
+vim ~/.local/share/fcitx5/rime
+/default.custom.yaml
+插入：
+patch:
+   __include: rime_ice_suggestion:/
+保存退出
+fcitx5 -d
+super+d打开 Fcitx 5 配置
+搜索rime，添加rime到左边
+附加组件 - classic
+设置竖向显示
+\end{lstlisting}
+
+添加自启动：
+\begin{lstlisting}
+进入niri配置文件
+插入：spawn-at-startup "fcitx5"
+搜索binds
+插入：
+Mod+F1 { spawn-sh "pkill fcitx5 || fcitx5"; }
+\end{lstlisting}
+
+\subsection{桌面功能}
+
+安装桌面功能：
+\begin{lstlisting}
+sudo pacman -S ffmpegthumbnailer gvfs-smb nautilus-open-any-terminal file-roller gnome-keyring gst-plugins-base gst-plugins-good gst-libav
+sudo ln -s /usr/bin/kitty /usr/bin/gnome-terminal
+vim ~/.config/kitty/kitty.conf
+shell /usr/bin/fish
+niri配置文件
+插入：
+Mod+E { spawn "nautilus"; }
+\end{lstlisting}
+
+niri的门户设置:
+\begin{lstlisting}
+mkdir -p ~/.config/xdg-desktop-portal/
+vim ~/.config/xdg-desktop-portal/
+xdg-desktop-portal.conf
+插入：
+[preferred]
+default=gnome;gtk;
+org.freedesktop.impl.portal.FileChooser=gtk
+\end{lstlisting}
+
+锁屏功能：
+\begin{lstlisting}
+sudo pacman -S swaylock-effects
+mkdir -p ~/.config/swaylock
+vim ~/.config/swaylock/config
+插入：
+screenshots
+clock
+indicator
+indicator-radius=200
+indicator-thickness=15
+effect-blur=10x5
+
+niri配置文件
+插入：
+Super+Alt+L hotkey-overlay-title="Lock the Screen: swaylock"{ spawn "swaylock"; }
+
+sudo pacman -S swayidle
+mkdir -p ~/.config/niri/scripts
+vim ~/.config/niri/scripts/swayidle.sh
+插入：
+#!/usr/bin/env bash
+swayidle -w \
+    timeout 300 'swaylock -f ' \
+    timeout 600 'niri msg action power-off-monitors' \
+    resume 'niri msg action power-on-monitors' \
+    timeout 1200 'systemctl suspend' 
+保存退出
+chmod +x ~/.config/niri/scripts/swayidle.sh
+
+niri配置文件
+插入：
+spawn-at-startup "~/.config/niri/scripts/swayidle.sh"
+保存退出
+
+bash ~/.config/niri/scripts/swayidle.sh & disown
+\end{lstlisting}
+
+蓝牙功能：
+\begin{lstlisting}
+sudo pacman -S --needed blueberry bluez
+sudo systemctl enable --now bluetooth
+sudo pacman -S --needed power-profiles-daemon
+sudo systemctl enable --now power-profiles-daemon
+\end{lstlisting}
+
+
+剪贴板：
+\begin{lstlisting}
+sudo pacman -S yay
+yay -S wl-clipboard clipse-bin(/git) clipse-gui (报错就分开下)
+clipse --listen
+niri配置文件
+插入：
+spawn-sh-at-startup "clipse --listen"
+Mod+Alt+V { spawn "clipse --gui"; }
+保存一下
+
+按上面的快捷键
+命令行运行
+niri msg pick-window
+记住Title或者App ID：
+Title: "Clipse GUI"
+App ID: "clipse-gui"
+
+niri配置文件
+找到window-rule
+window-rule {
+    // This app-id regular expression will work for both:
+    // - host Firefox (app-id is "firefox")
+    // - Flatpak Firefox (app-id is "org.mozilla.firefox")
+    match app-id=r#"firefox$"# title="^Picture-in-Picture$"
+    match app-id="clipse-gui" (这个)
+    open-floating true（和这个）
+}
+\end{lstlisting}
+
+\subsection{屏幕功能}
+
+截图功能：
+\begin{lstlisting} 
+niri配置文件
+搜索screenshot
+可以修改快捷方式
+Mod+Alt+A { screenshot;}
+保存位置在
+screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d-%H-%M-%S.png"
+保存退出
+sudo pacman -S satty
+mkdir -p ~/.config/satty
+vim ~/.config/satty/config.toml
+插入：
+[general]
+copy-command = "wl-copy"
+focus-toggles-toolbars = true
+actions-on-right-click = ["save-to-clipboard"]
+
+cd /Templates
+touch new
+
+文件打开/.config/niri/scripts
+右键一个文件
+edit-screenshot.sh
+
+vim编辑
+#!/usr/bin/env bash
+
+CLIPNOW=$(wl-paste | sha1sum)
+niri msg action screenshot
+while ["$wl-paste | sha1sum" = "$CLIPNOW"]; do
+sleep .05
+done
+wl-paste | satty -f -
+
+niri配置文件
+Mod+shift+S { spawn "~/.config/niri/scripts/
+edit-screenshot.sh"; }
+\end{lstlisting}
+3.5 
+屏幕分享：
+\begin{lstlisting}
+sudo pacman -S --needed sof-firmware alsa-ucm-conf alsa-firmware
+sudo pacman -S --needed pipewire wireplumber pipewire-alsa pipewire-pulse pipewire-jack
+systemctl --user enable --now pipewire pipewire-pulse wireplumber
+sudo pacman -S pavucontrol
+niri配置文件
+spawn-sh-at-startup "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=niri & /usr/lib/xdg-desktop-portal-gnome"
+
+sudo pacman -S --needed flatpak gnome-software
+sudo flatpak remote-modify flathub --url=https://mirrors.sjtu.edu.cn/flathub
+
+reboot
+在软件商城安装obs
+\end{lstlisting}
+
+笔记本用户亮度切换：
+\begin{lstlisting}
+sudo pacman -S brightnessctl
+\end{lstlisting}
+
+
+\subsection{niri美化}
+
+壁纸
+\begin{lstlisting}
+yay -S awww(老版是swww) waypaper
+niri配置文件
+spawn-at-startup "awww-daemon"
+Mod+Alt+W {spawn "waypaper"}
+
+match app-id="clipse-gui"下
+加入 match app-id = "waypaper"开启浮动
+\end{lstlisting}
+
+任务栏
+\begin{lstlisting}
+sudo pacman -S waybar ttf-jetbrains-mono-nerd
+niri配置文件
+Mod+F2 {spawn-sh "pkill waybar || true && waybar";}
+\end{lstlisting}
+
+\section{任务栏diy}
+\subsection{安装插件}
+
+指令:
+\begin{lstlisting}
+sudo pacman -S wofi
+\end{lstlisting}
+
+\subsection{自定义}
+
+自己创建waybar：
+\begin{lstlisting}
+mkdir -p ~/.config/waybar
+touch ~/.config/waybar/config.jsonc
+touch ~/.config/waybar/style.css
+\end{lstlisting}
+
+设置启动脚本：
+
+这是我自己的waybar启动配置
+\begin{lstlisting}
+cd ~/.config/niri/scripts/
+vim xxx.sh
+#!/bin/bash
+# 杀掉已有的 Waybar（避免重复启动）
+# pkill waybar || true
+
+# 启动左边 Waybar
+waybar -c ~/.config/waybar/left_config.jsonc -s ~/.config/waybar/left_style.css &
+sleep 0.3
+# 启动右边 Waybar
+waybar -c ~/.config/waybar/right_config.jsonc -s ~/.config/waybar/right_style.css &
+\end{lstlisting}
+
+\subsection{导入}
+
+
+
+
+
+\end{document}
