@@ -1,0 +1,166 @@
+{
+    "niri/workspaces": {
+        "format": "{icon}",
+        "format-icons": {
+            "active": "ᗧ",
+            "default": "·"
+        }
+    },
+    "wlr/taskbar": {
+        "format": "{icon}",
+        "icon-size": 14,
+        "tooltip-format": "{title}",
+        "on-click": "activate",
+        "on-click-middle": "close"
+    },
+
+    "clock": {
+        "format": "󰥔",
+        "tooltip-format": "{:%Y/%m/%d %A %H:%M}"
+    },
+
+    "custom/actions": {
+        "format": "󰘳",
+        "tooltip-format": "左键：控制台 | 右键：常用指令",
+        "on-click": "kitty",
+        "on-click-right": "~/.config/waybar/scripts/command-center.sh"
+    },
+
+    "power-profiles-daemon": {
+        "format": "{icon}",
+        "tooltip-format": "当前性能模式：{profile}\n---\n左键:切换性能模式",
+        "tooltip": true,
+        "format-icons": {
+            "performance": "󰓅",
+            "balanced": "󰾅",
+            "power-saver": "󰾆"
+
+        }
+    },
+    "custom/power": {
+        "format": "󰐥",
+        // "tooltip": "电源菜单",
+        "on-click": "~/.config/waybar/scripts/power-menu.sh"
+    },
+// 右边状态栏
+    "group/system": {
+        "orientation": "vertical",
+        "modules": [
+            "cpu",
+            "memory"
+        ]
+    },
+    "cpu": {
+        "format": "󰻠",
+        "interval": 1,
+        "states": {
+            "warning": 33,
+            "critical": 66
+        }
+    },
+    "memory": {
+        "format": "󰍛",
+        "interval": 1,
+        "states": {
+            "warning": 33,
+            "critical": 66
+        }
+    },
+    "tray":{
+        "icon-size": 14,
+        "spacing": 5
+    },
+  //网络和蓝牙
+  "group/network-bluetooth": {
+    "orientation": "inherit",
+    "drawer": {
+      "transition-left-to-right": false
+    },
+    "modules": [
+      "network",
+      "bluetooth"
+    ]
+  },
+  "network": {
+    "format-disconnected": "{icon}",
+    "format-wifi": "{icon}",
+    "format-ethernet": "{icon}",
+    "format-icons": {
+    "disconnected": "●",
+    "wifi": ["○","◔","◑","◕","●"],
+    "ethernet": "◆"
+    },
+    //鼠标悬浮在wifi图标上会显示wifi名称、信号强度、ip地址、设备名
+    "tooltip-format-wifi": "{essid} ({signalStrength}%)\n{ifname} : {ipaddr}\n---\n左键:打开面板\n右键:打开高级网络配置工具",
+    "tooltip-format-ethernet": "{ifname} : {ipaddr}\n---\n左键:打开面板\n右键:打开高级网络配置工具",
+    "tooltip-format-disconnected": "网络未连接\n---\n左键:打开面板\n右键:打开高级网络配置工具",
+    "on-click": "kitty --class network-tui -e ~/.config/waybar/scripts/select-network-tui.sh",
+    "on-click-right": "nm-connection-editor"
+    },
+    "bluetooth": {
+        "format-disabled": "✕",
+        "format": "",
+        "format-connected": "",
+
+        "tooltip-format-connected": " {device_alias}",
+        "tooltip-format-disabled": "右键：启用蓝牙",
+        "tooltip-format-on": "左键：打开面板\n右键:禁用蓝牙",
+
+        "on-click-right": "~/.config/waybar/scripts/toggle-bluetooth.sh",
+        "on-click": "kitty --class bluetui -e bluetui"
+    },
+    
+    "group/audio": {
+            "orientation": "inherit",
+            "drawer": {
+                "transition-left-to-right": false
+            },
+            "modules": [
+                "pulseaudio",
+                "pulseaudio/slider"
+                
+            ]
+        },
+
+    "pulseaudio": {
+        "format": "󰕾",
+        "format-muted": "󰖁",
+
+        "format-bluetooth": "󰕾",
+        "format-source": "󰕾",
+        "format-source-muted": "󰕾",
+
+        "tooltip-format": "左键：静音\n右键：麦克风\n中键：打开面板",
+
+        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+        "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle",
+        "on-click-middle": "pavucontrol --tab=3",
+        "on-scroll-up": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+",
+        "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+    },
+
+   "pulseaudio/slider": {
+        "min": 0,
+        "max": 100,
+        "orientation": "vertical",
+        "reverse-scrolling": false
+    },
+    "custom/mic": {
+        // "exec": "wpctl get-volume @DEFAULT_AUDIO_SOURCE@ | awk '{if ($0 ~ /MUTED/) printf \"󰍭|muted|0\"; else printf \"󰍬|active|%.0f\", $2*100}'",
+        "exec": "wpctl get-volume @DEFAULT_AUDIO_SOURCE@ | awk '{if ($0 ~ /MUTED/) print \"󰍭\"; else print \"󰍬\"}'",
+        "interval": 1,
+
+        "format": "{}",
+
+        "tooltip": true,
+        "tooltip-format": "麦克风：{0}\n状态：{1}\n音量：{2}%\n左键：开/关\n滚轮：调音量",
+
+        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle",
+        "on-scroll-up": "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%+",
+        "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%-"
+    },
+    "custom/brightness": {
+        "exec": "echo 󰃞",
+        "interval": 10
+    }
+}

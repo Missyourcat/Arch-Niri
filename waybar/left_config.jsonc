@@ -1,0 +1,24 @@
+{
+    "include": ["modules_custom.jsonc"],
+    "layer": "top",
+    "position": "left",
+    // "fixed-center": false,
+
+    // "spacing": 0,
+    // "width": 48,
+
+    "modules-left": [
+        "niri/workspaces",
+        "wlr/taskbar"
+    ],
+
+    "modules-center": [
+        "custom/actions",
+        "clock",
+        "power-profiles-daemon"
+    ],
+
+    "modules-right": [
+        "custom/power"
+    ]
+}

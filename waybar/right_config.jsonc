@@ -1,0 +1,24 @@
+{
+    "include": ["modules_custom.jsonc"],
+    "layer": "top",
+    "position": "right",
+
+    "modules-left": [
+        "group/system",
+        "tray"
+
+    ],
+
+    "modules-center": [
+        "group/audio",
+        "custom/mic"
+        // "backlight"
+        
+    ],
+
+    "modules-right": [
+        // "custom/brightness",
+        "network",
+        "bluetooth"
+    ]
+}

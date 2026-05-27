@@ -1,0 +1,81 @@
+* {
+    color: #cdd6f4;
+    font-family: "Fira Code";
+        min-width: 18px;
+}
+
+window#waybar {
+    background: black;
+}
+
+#network,
+#bluetooth,
+#tray  {
+    padding: 1px;
+    margin: 1px 0px;
+}
+
+
+#group-audio {
+    padding: 0px;
+    margin: 0px;
+}
+#pulseaudio {
+    margin: 0px;
+}
+#pulseaudio:hover {
+    background: rgba(137, 180, 250, 0.15);
+    border-radius: 6px;
+}
+#pulseaudio-slider {
+    min-height: 120px;
+    min-width: 14px;
+    padding: 0px;
+    /* margin: 10px 0; */
+}
+#pulseaudio-slider trough {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    min-width: 2px;
+}
+
+#pulseaudio-slider highlight {
+    background: #ffffff;
+    border-radius: 6px;
+    min-width: 1px;
+}
+#pulseaudio-slider slider {
+    all: unset;
+    min-width: 6px;
+    min-height: 6px;
+    border-radius: 50%;
+    /* background: #ff0000; */
+}
+
+/* 默认：绿色（0–33） */
+#cpu, #memory {
+    color: #a6e3a1;
+}
+
+/* 33–66：黄色 */
+#cpu.warning,
+#memory.warning {
+    color: #f9e2af;
+}
+
+/* 66–100：红色 */
+#cpu.critical,
+#memory.critical {
+    color: #f38ba8;
+}
+/* #custom-mic {
+    min-width: 14px;
+    min-height: 120px;
+
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+}
+
+#custom-mic:hover {
+    background: rgba(137, 180, 250, 0.15);
+} */

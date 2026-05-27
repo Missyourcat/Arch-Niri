@@ -1,0 +1,41 @@
+* {
+    color: #cdd6f4;
+    font-family: "Fira Code";
+    /* font-size: 18px; */
+    min-width: 18px;
+}
+
+window#waybar {
+    background: black;
+}
+
+#workspaces button {
+    /* min-width: 18px; */
+    /* min-height: 18px; */
+    padding: 0;
+    margin: 1px 0;
+}
+#workspaces button.active {
+    background: rgba(137,180,250,0.25);
+}  
+#workspaces button:hover {
+    background: rgba(137,180,250,0.15);
+}
+#taskbar button {
+    /* min-width: 22px; */
+    /* min-height: 22px; */
+    padding: 0;
+    margin: 1px 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    outline: none;
+}
+
+#clock,
+#custom-actions,
+#power-profiles-daemon 
+{
+    padding: 1px;
+    margin: 1px 0;
+}
